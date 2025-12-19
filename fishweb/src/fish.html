@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>梦幻海洋鱼群</title>
+    <style>
+      /* 全局基础样式 */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+        background: linear-gradient(to bottom, #0a1a3a, #1a4b7a, #2a93d4);
+        min-height: 100vh;
+        color: white;
+        overflow: hidden;
+        position: relative;
+      }
+
+      /* 海洋背景增强 */
+      .ocean-bg {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+        overflow: hidden;
+      }
+
+      /* 水波效果 */
+      .water-surface {
+        position: absolute;
+        width: 100%;
+        height: 30%;
+        bottom: 0;
+        background: linear-gradient(transparent, rgba(32, 156, 238, 0.1));
+        animation: waterRipple 8s infinite ease-in-out;
+      }
+
+      /* 光影斑点模拟水下光线 */
+      .light-spots {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(
+            circle at 20% 30%,
+            rgba(255, 255, 255, 0.05) 0%,
+            transparent 50%
+          ),
+          radial-gradient(
+            circle at 80% 60%,
+            rgba(255, 255, 255, 0.03) 0%,
+            transparent 50%
+          );
+      }
+
+      /* 标题区域 */
+      .header {
+        text-align: center;
+        padding: 2.5rem 1rem 2rem;
+        z-index: 20;
+        position: relative;
+        background: rgba(10, 26, 58, 0.5);
+        backdrop-filter: blur(3px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      h1 {
+        font-size: 3rem;
+        font-weight: 300;
+        margin-bottom: 0.8rem;
+        background: linear-gradient(
+          to right,
+          #7fffd4,
+          #87cefa,
+          #98fb98,
+          #afeeee
+        );
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        text-shadow: 0 2px 15px rgba(0, 0, 0, 0.3);
+      }
+
+      .subtitle {
+        font-size: 1.2rem;
+        font-weight: 300;
+        color: #d1f0ff;
+        margin-bottom: 1.8rem;
+        line-height: 1.6;
+      }
+
+      /* 鱼群信息面板 */
+      .fish-info {
+        display: flex;
+        justify-content: center;
+        gap: 2rem;
+        flex-wrap: wrap;
+        margin-top: 1.5rem;
+      }
+
+      .info-card {
+        background: rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(5px);
+        border-radius: 12px;
+        padding: 1rem 1.5rem;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        min-width: 180px;
+      }
+
+      .info-card h3 {
+        font-size: 1rem;
+        font-weight: 400;
+        color: #87ceeb;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .info-card p {
+        font-size: 1.8rem;
+        font-weight: 300;
+        color: #fffacd;
+      }
+
+      /* 操作说明 */
+      .instructions {
+        text-align: center;
+        padding: 1.5rem 1rem;
+        font-size: 1.1rem;
+        color: #b0e2ff;
+        z-index: 20;
+        position: relative;
+        line-height: 1.8;
+      }
+
+      .highlight {
+        color: #fffacd;
+        font-weight: 500;
+      }
+
+      /* 控制面板 */
+      .controls {
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 1rem;
+        z-index: 1000;
+      }
+
+      .control-btn {
+        background: rgba(255, 255, 255, 0.12);
+        backdrop-filter: blur(5px);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        color: white;
+        padding: 0.8rem 1.5rem;
+        border-radius: 25px;
+        cursor: pointer;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .control-btn:hover {
+        background: rgba(255, 255, 255, 0.2);
+        transform: translateY(-2px);
+      }
+
+      /* 鱼样式 */
+      .fish {
+        position: absolute;
+        z-index: 10;
+        transition: transform 0.1s linear;
+        pointer-events: none;
+      }
+
+      .fish-body {
+        position: relative;
+        width: 100%;
+        height: 100%;
+      }
+
+      /* 鱼尾 - 会摆动 */
+      .fish-tail {
+        position: absolute;
+        right: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 0;
+        height: 0;
+        border-style: solid;
+        animation: tailSwim 0.5s infinite ease-in-out alternate;
+      }
+
+      /* 鱼眼 */
+      .fish-eye {
+        position: absolute;
+        width: 20%;
+        height: 20%;
+        background: white;
+        border-radius: 50%;
+        top: 25%;
+        left: 20%;
+      }
+
+      .fish-eye::after {
+        content: "";
+        position: absolute;
+        width: 50%;
+        height: 50%;
+        background: black;
+        border-radius: 50%;
+        top: 25%;
+        left: 25%;
+      }
+
+      /* 点击产生的食物 */
+      .food {
+        position: absolute;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 5;
+        filter: blur(1px);
+      }
+
+      /* 鱼群轨迹（可选） */
+      .trail {
+        position: absolute;
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 2;
+        opacity: 0.6;
+      }
+
+      /* 动画定义 */
+      @keyframes tailSwim {
+        0% {
+          transform: translateY(-50%) rotate(0deg);
+        }
+        100% {
+          transform: translateY(-50%) rotate(20deg);
+        }
+      }
+
+      @keyframes waterRipple {
+        0%,
+        100% {
+          transform: translateY(0) scale(1);
+          opacity: 0.7;
+        }
+        50% {
+          transform: translateY(-10px) scale(1.02);
+          opacity: 1;
+        }
+      }
+
+      @keyframes fadeOut {
+        from {
+          opacity: 1;
+          transform: scale(1);
+        }
+        to {
+          opacity: 0;
+          transform: scale(0.5);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 海洋背景 -->
+    <div class="ocean-bg">
+      <div class="light-spots"></div>
+      <div class="water-surface"></div>
+    </div>
+
+    <!-- 标题和信息区域 -->
+    <div class="header">
+      <h1>深海鱼群模拟</h1>
+      <p class="subtitle">
+        基于Boids算法实现的逼真鱼群行为模拟 · 点击海面投放食物吸引鱼群
+      </p>
+
+      <div class="fish-info">
+        <div class="info-card">
+          <h3>🐟 鱼群数量</h3>
+          <p id="fishCount">0</p>
+        </div>
+        <div class="info-card">
+          <h3>🎯 活跃食物</h3>
+          <p id="foodCount">0</p>
+        </div>
+        <div class="info-card">
+          <h3>🌊 鱼群状态</h3>
+          <p id="schoolState">游动中</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 操作说明 -->
+    <div class="instructions">
+      <p>
+        ✨
+        <span class="highlight">点击海面任意位置</span
+        >投放食物，鱼群会被吸引过来觅食
+      </p>
+      <p>
+        🐠
+        鱼群会自动遵循<strong>分离、对齐、聚集</strong>三个基本规则，形成自然群落
+      </p>
+    </div>
+
+    <!-- 控制面板 -->
+    <div class="controls">
+      <button class="control-btn" id="addFishBtn">+ 添加小鱼</button>
+      <button class="control-btn" id="clearFoodBtn">🧹 清除食物</button>
+      <button class="control-btn" id="toggleTrailsBtn">📈 轨迹开关</button>
+    </div>
+
+    <!-- 鱼和食物的容器 -->
+    <div id="oceanContainer"></div>
+
+    <script>
+      // 鱼群模拟核心算法 - Boids算法实现
+      class BoidsFishSchool {
+        constructor() {
+          this.fishes = [];
+          this.foods = [];
+          this.trails = [];
+          this.showTrails = false;
+          this.trailLimit = 100;
+
+          // 鱼群行为参数
+          this.config = {
+            maxSpeed: 2.5, // 最大速度
+            maxForce: 0.05, // 最大转向力
+            visualRange: 120, // 视野范围
+            separationWeight: 1.5, // 分离权重（避免碰撞）
+            alignmentWeight: 1.0, // 对齐权重（方向一致）
+            cohesionWeight: 1.0, // 聚集权重（向中心靠拢）
+            foodAttractionWeight: 1.8, // 食物吸引力权重
+            edgeMargin: 50, // 边界距离
+            edgeTurnFactor: 0.5, // 边界转向因子
+          };
+
+          // 鱼的类型和颜色
+          this.fishTypes = [
+            { name: "小丑鱼", color: "#FF6B6B", size: 20, speed: 1.0 }, // 橙色
+            { name: "蓝唐鱼", color: "#4ECDC4", size: 24, speed: 0.9 }, // 青蓝色
+            { name: "黄金吊", color: "#FFD166", size: 28, speed: 0.8 }, // 金色
+            { name: "紫罗兰", color: "#9D4EDD", size: 22, speed: 1.1 }, // 紫色
+          ];
+
+          this.container = document.getElementById("oceanContainer");
+          this.init();
+        }
+
+        init() {
+          // 初始化鱼群
+          this.createInitialFish(15);
+
+          // 绑定事件
+          this.bindEvents();
+
+          // 开始动画循环
+          this.animate();
+        }
+
+        // 创建初始鱼群
+        createInitialFish(count) {
+          for (let i = 0; i < count; i++) {
+            this.addFish(
+              Math.random() * window.innerWidth,
+              Math.random() * window.innerHeight
+            );
+          }
+          this.updateFishCount();
+        }
+
+        // 添加一条鱼
+        addFish(x, y) {
+          const type =
+            this.fishTypes[Math.floor(Math.random() * this.fishTypes.length)];
+          const fish = {
+            id: this.fishes.length,
+            x: x || Math.random() * window.innerWidth,
+            y: y || Math.random() * window.innerHeight,
+            vx: (Math.random() - 0.5) * 2,
+            vy: (Math.random() - 0.5) * 2,
+            type: type,
+            size: type.size + Math.random() * 8,
+            element: null,
+            trailHistory: [],
+          };
+
+          // 创建鱼DOM元素
+          const fishEl = document.createElement("div");
+          fishEl.className = "fish";
+          fishEl.innerHTML = `
+                    <div class="fish-body">
+                        <div class="fish-tail"></div>
+                        <div class="fish-eye"></div>
+                    </div>
+                `;
+
+          // 设置鱼的颜色和大小
+          fishEl.style.width = fish.size + "px";
+          fishEl.style.height = fish.size / 2 + "px";
+          fishEl.style.color = type.color;
+          fishEl.querySelector(
+            ".fish-tail"
+          ).style.borderColor = `transparent transparent transparent ${type.color}`;
+          fishEl.querySelector(".fish-tail").style.borderWidth = `${
+            fish.size / 4
+          }px 0 ${fish.size / 4}px ${fish.size / 2}px`;
+          fishEl.style.backgroundColor = type.color;
+          fishEl.style.borderRadius = `${fish.size / 2}px ${fish.size / 4}px ${
+            fish.size / 4
+          }px ${fish.size / 2}px`;
+
+          this.container.appendChild(fishEl);
+          fish.element = fishEl;
+          this.fishes.push(fish);
+
+          this.updateFishCount();
+          return fish;
+        }
+
+        // Boids算法核心：分离（避免碰撞）
+        separation(fish) {
+          let steerX = 0;
+          let steerY = 0;
+          let count = 0;
+
+          for (let other of this.fishes) {
+            if (other === fish) continue;
+
+            const dx = fish.x - other.x;
+            const dy = fish.y - other.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance > 0 && distance < this.config.visualRange * 0.4) {
+              const diffX = dx / distance;
+              const diffY = dy / distance;
+              steerX += diffX / distance;
+              steerY += diffY / distance;
+              count++;
+            }
+          }
+
+          if (count > 0) {
+            steerX /= count;
+            steerY /= count;
+
+            // 转换为力
+            const magnitude = Math.sqrt(steerX * steerX + steerY * steerY);
+            if (magnitude > 0) {
+              steerX = (steerX / magnitude) * this.config.maxSpeed;
+              steerY = (steerY / magnitude) * this.config.maxSpeed;
+
+              steerX -= fish.vx;
+              steerY -= fish.vy;
+
+              const steerMag = Math.sqrt(steerX * steerX + steerY * steerY);
+              if (steerMag > this.config.maxForce) {
+                steerX = (steerX / steerMag) * this.config.maxForce;
+                steerY = (steerY / steerMag) * this.config.maxForce;
+              }
+            }
+          }
+
+          return { x: steerX, y: steerY };
+        }
+
+        // Boids算法核心：对齐（方向一致）
+        alignment(fish) {
+          let avgVx = 0;
+          let avgVy = 0;
+          let count = 0;
+
+          for (let other of this.fishes) {
+            if (other === fish) continue;
+
+            const dx = fish.x - other.x;
+            const dy = fish.y - other.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance > 0 && distance < this.config.visualRange) {
+              avgVx += other.vx;
+              avgVy += other.vy;
+              count++;
+            }
+          }
+
+          if (count > 0) {
+            avgVx /= count;
+            avgVy /= count;
+
+            const magnitude = Math.sqrt(avgVx * avgVx + avgVy * avgVy);
+            if (magnitude > 0) {
+              avgVx = (avgVx / magnitude) * this.config.maxSpeed;
+              avgVy = (avgVy / magnitude) * this.config.maxSpeed;
+
+              avgVx -= fish.vx;
+              avgVy -= fish.vy;
+
+              const steerMag = Math.sqrt(avgVx * avgVx + avgVy * avgVy);
+              if (steerMag > this.config.maxForce) {
+                avgVx = (avgVx / steerMag) * this.config.maxForce;
+                avgVy = (avgVy / steerMag) * this.config.maxForce;
+              }
+            }
+          }
+
+          return { x: avgVx, y: avgVy };
+        }
+
+        // Boids算法核心：聚集（向中心靠拢）
+        cohesion(fish) {
+          let centerX = 0;
+          let centerY = 0;
+          let count = 0;
+
+          for (let other of this.fishes) {
+            if (other === fish) continue;
+
+            const dx = fish.x - other.x;
+            const dy = fish.y - other.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance > 0 && distance < this.config.visualRange) {
+              centerX += other.x;
+              centerY += other.y;
+              count++;
+            }
+          }
+
+          if (count > 0) {
+            centerX /= count;
+            centerY /= count;
+
+            let desiredX = centerX - fish.x;
+            let desiredY = centerY - fish.y;
+
+            const dist = Math.sqrt(desiredX * desiredX + desiredY * desiredY);
+            if (dist > 0) {
+              desiredX = (desiredX / dist) * this.config.maxSpeed;
+              desiredY = (desiredY / dist) * this.config.maxSpeed;
+
+              desiredX -= fish.vx;
+              desiredY -= fish.vy;
+
+              const steerMag = Math.sqrt(
+                desiredX * desiredX + desiredY * desiredY
+              );
+              if (steerMag > this.config.maxForce) {
+                desiredX = (desiredX / steerMag) * this.config.maxForce;
+                desiredY = (desiredY / steerMag) * this.config.maxForce;
+              }
+            }
+
+            return { x: desiredX, y: desiredY };
+          }
+
+          return { x: 0, y: 0 };
+        }
+
+        // 食物吸引力
+        foodAttraction(fish) {
+          if (this.foods.length === 0) return { x: 0, y: 0 };
+
+          let closestFood = null;
+          let closestDist = Infinity;
+
+          for (let food of this.foods) {
+            const dx = food.x - fish.x;
+            const dy = food.y - fish.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance < closestDist && distance < 300) {
+              closestDist = distance;
+              closestFood = food;
+            }
+          }
+
+          if (!closestFood) return { x: 0, y: 0 };
+
+          let desiredX = closestFood.x - fish.x;
+          let desiredY = closestFood.y - fish.y;
+          const dist = Math.sqrt(desiredX * desiredX + desiredY * desiredY);
+
+          if (dist > 0) {
+            // 离食物越近，速度越慢
+            const speed = this.config.maxSpeed * Math.min(dist / 100, 1);
+            desiredX = (desiredX / dist) * speed;
+            desiredY = (desiredY / dist) * speed;
+
+            desiredX -= fish.vx;
+            desiredY -= fish.vy;
+
+            const steerMag = Math.sqrt(
+              desiredX * desiredX + desiredY * desiredY
+            );
+            if (steerMag > this.config.maxForce * 2) {
+              desiredX = (desiredX / steerMag) * this.config.maxForce * 2;
+              desiredY = (desiredY / steerMag) * this.config.maxForce * 2;
+            }
+
+            return { x: desiredX, y: desiredY };
+          }
+
+          return { x: 0, y: 0 };
+        }
+
+        // 边界处理
+        checkBounds(fish) {
+          const turnForce = this.config.edgeTurnFactor;
+          let forceX = 0,
+            forceY = 0;
+
+          if (fish.x < this.config.edgeMargin) {
+            forceX = turnForce;
+          } else if (fish.x > window.innerWidth - this.config.edgeMargin) {
+            forceX = -turnForce;
+          }
+
+          if (fish.y < this.config.edgeMargin) {
+            forceY = turnForce;
+          } else if (fish.y > window.innerHeight - this.config.edgeMargin) {
+            forceY = -turnForce;
+          }
+
+          return { x: forceX, y: forceY };
+        }
+
+        // 更新鱼的状态
+        updateFish(fish) {
+          // 计算各种力
+          const sep = this.separation(fish);
+          const ali = this.alignment(fish);
+          const coh = this.cohesion(fish);
+          const food = this.foodAttraction(fish);
+          const bounds = this.checkBounds(fish);
+
+          // 应用加权力
+          fish.vx +=
+            sep.x * this.config.separationWeight +
+            ali.x * this.config.alignmentWeight +
+            coh.x * this.config.cohesionWeight +
+            food.x * this.config.foodAttractionWeight +
+            bounds.x;
+
+          fish.vy +=
+            sep.y * this.config.separationWeight +
+            ali.y * this.config.alignmentWeight +
+            coh.y * this.config.cohesionWeight +
+            food.y * this.config.foodAttractionWeight +
+            bounds.y;
+
+          // 限制速度
+          const speed = Math.sqrt(fish.vx * fish.vx + fish.vy * fish.vy);
+          if (speed > this.config.maxSpeed) {
+            fish.vx = (fish.vx / speed) * this.config.maxSpeed;
+            fish.vy = (fish.vy / speed) * this.config.maxSpeed;
+          }
+
+          // 更新位置
+          fish.x += fish.vx;
+          fish.y += fish.vy;
+
+          // 记录轨迹
+          if (this.showTrails) {
+            fish.trailHistory.push({ x: fish.x, y: fish.y });
+            if (fish.trailHistory.length > 5) {
+              fish.trailHistory.shift();
+            }
+          }
+
+          // 更新DOM元素
+          this.updateFishElement(fish);
+        }
+
+        // 更新鱼的DOM元素
+        updateFishElement(fish) {
+          if (!fish.element) return;
+
+          // 计算角度
+          const angle = (Math.atan2(fish.vy, fish.vx) * 180) / Math.PI;
+
+          // 更新位置和旋转
+          fish.element.style.transform = `translate(${fish.x}px, ${fish.y}px) rotate(${angle}deg)`;
+          fish.element.style.left = "0";
+          fish.element.style.top = "0";
+        }
+
+        // 添加食物
+        addFood(x, y) {
+          const food = {
+            x: x,
+            y: y,
+            createdAt: Date.now(),
+            lifespan: 8000, // 8秒后消失
+            element: null,
+          };
+
+          const foodEl = document.createElement("div");
+          foodEl.className = "food";
+          foodEl.style.left = x + "px";
+          foodEl.style.top = y + "px";
+          foodEl.style.backgroundColor = `hsl(${
+            Math.random() * 60 + 40
+          }, 100%, 70%)`;
+          foodEl.style.boxShadow = `0 0 15px 5px hsl(${
+            Math.random() * 60 + 40
+          }, 100%, 70%)`;
+
+          this.container.appendChild(foodEl);
+          food.element = foodEl;
+          this.foods.push(food);
+
+          // 食物淡出动画
+          setTimeout(() => {
+            if (food.element && food.element.parentNode) {
+              food.element.style.animation = "fadeOut 0.5s forwards";
+              setTimeout(() => {
+                if (food.element && food.element.parentNode) {
+                  food.element.remove();
+                }
+              }, 500);
+            }
+          }, food.lifespan - 500);
+
+          this.updateFoodCount();
+          return food;
+        }
+
+        // 清理过期食物
+        cleanupFoods() {
+          const now = Date.now();
+          for (let i = this.foods.length - 1; i >= 0; i--) {
+            const food = this.foods[i];
+            if (now - food.createdAt > food.lifespan) {
+              if (food.element && food.element.parentNode) {
+                food.element.remove();
+              }
+              this.foods.splice(i, 1);
+            }
+          }
+          this.updateFoodCount();
+        }
+
+        // 更新统计信息
+        updateFishCount() {
+          document.getElementById("fishCount").textContent = this.fishes.length;
+        }
+
+        updateFoodCount() {
+          document.getElementById("foodCount").textContent = this.foods.length;
+          const stateEl = document.getElementById("schoolState");
+          if (this.foods.length > 0) {
+            stateEl.textContent = "觅食中";
+            stateEl.style.color = "#FFD700";
+          } else {
+            stateEl.textContent = "游动中";
+            stateEl.style.color = "#98FB98";
+          }
+        }
+
+        // 清除所有食物
+        clearAllFoods() {
+          this.foods.forEach((food) => {
+            if (food.element && food.element.parentNode) {
+              food.element.remove();
+            }
+          });
+          this.foods = [];
+          this.updateFoodCount();
+        }
+
+        // 绑定事件
+        bindEvents() {
+          // 点击添加食物
+          document.addEventListener("click", (e) => {
+            if (e.target.tagName === "BUTTON") return;
+            this.addFood(e.clientX, e.clientY);
+
+            // 添加多个食物点，更自然
+            for (let i = 0; i < 3; i++) {
+              setTimeout(() => {
+                const angle = Math.random() * Math.PI * 2;
+                const distance = Math.random() * 30;
+                this.addFood(
+                  e.clientX + Math.cos(angle) * distance,
+                  e.clientY + Math.sin(angle) * distance
+                );
+              }, i * 100);
+            }
+          });
+
+          // 控制按钮
+          document
+            .getElementById("addFishBtn")
+            .addEventListener("click", () => {
+              this.addFish();
+            });
+
+          document
+            .getElementById("clearFoodBtn")
+            .addEventListener("click", () => {
+              this.clearAllFoods();
+            });
+
+          document
+            .getElementById("toggleTrailsBtn")
+            .addEventListener("click", () => {
+              this.showTrails = !this.showTrails;
+              const btn = document.getElementById("toggleTrailsBtn");
+              btn.textContent = this.showTrails ? "📈 关闭轨迹" : "📈 显示轨迹";
+            });
+
+          // 窗口大小调整
+          window.addEventListener("resize", () => {
+            // 确保鱼不出界
+            this.fishes.forEach((fish) => {
+              fish.x = Math.max(0, Math.min(fish.x, window.innerWidth));
+              fish.y = Math.max(0, Math.min(fish.y, window.innerHeight));
+            });
+          });
+        }
+
+        // 动画循环
+        animate() {
+          // 更新每条鱼
+          this.fishes.forEach((fish) => this.updateFish(fish));
+
+          // 清理过期食物
+          this.cleanupFoods();
+
+          // 继续动画循环
+          requestAnimationFrame(() => this.animate());
+        }
+      }
+
+      // 页面加载后初始化鱼群
+      window.addEventListener("load", () => {
+        const fishSchool = new BoidsFishSchool();
+
+        // 添加一些初始食物
+        setTimeout(() => {
+          for (let i = 0; i < 3; i++) {
+            fishSchool.addFood(
+              window.innerWidth * 0.3 + Math.random() * window.innerWidth * 0.4,
+              window.innerHeight * 0.3 +
+                Math.random() * window.innerHeight * 0.4
+            );
+          }
+        }, 1000);
+      });
+    </script>
+  </body>
+</html>
