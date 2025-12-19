@@ -19,6 +19,25 @@ class MarineEcosystem {
       predationCount: 0, // 捕食次数
     };
 
+    // 环境系统
+    this.environment = {
+      // 时间系统
+      time: 12, // 当前时间（小时，0-24）
+      dayLength: 60, // 一天的长度（秒）
+      timeSpeed: 1, // 时间流逝速度（倍数）
+      isDay: true,
+      lightIntensity: 1.0,
+
+      // 水流系统
+      currentSpeed: 0.2,
+      currentDirection: 0, // 角度
+
+      // 温度系统
+      surfaceTemp: 25, // 表层温度
+      deepTemp: 15, // 深层温度
+      tempGradient: 0.5, // 温度梯度
+    };
+
     // 生态系统配置
     this.config = {
       // 基础参数
@@ -59,6 +78,8 @@ class MarineEcosystem {
         diet: "herbivore", // 食草
         foodChain: 1,
         canEat: [], // 不能吃其他鱼
+        activityPattern: "diurnal", // 昼行性
+        lightPreference: 0.8, // 偏好光照强度
       },
       {
         name: "蓝唐鱼",
@@ -68,6 +89,8 @@ class MarineEcosystem {
         diet: "omnivore", // 杂食
         foodChain: 2,
         canEat: [1], // 能吃层级1的鱼
+        activityPattern: "diurnal", // 昼行性
+        lightPreference: 0.7,
       },
       {
         name: "黄金吊",
@@ -77,6 +100,8 @@ class MarineEcosystem {
         diet: "carnivore", // 肉食
         foodChain: 3,
         canEat: [1, 2], // 能吃层级1-2的鱼
+        activityPattern: "crepuscular", // 晨昏性
+        lightPreference: 0.4,
       },
       {
         name: "紫罗兰",
@@ -86,6 +111,8 @@ class MarineEcosystem {
         diet: "apex", // 顶级掠食
         foodChain: 4,
         canEat: [1, 2, 3], // 能吃所有低层级鱼
+        activityPattern: "nocturnal", // 夜行性
+        lightPreference: 0.2,
       },
     ];
 
@@ -541,6 +568,11 @@ class MarineEcosystem {
    * 更新鱼的行为（Boids算法）
    */
   updateFishBehavior(fish, deltaTime) {
+    // 环境影响因子
+    const lightFactor = this.getLightInfluence(fish);
+    const currentForce = this.getCurrentForce(fish);
+    const tempFactor = this.getTemperatureInfluence(fish);
+
     // 基础Boids行为
     const sep = this.separation(fish);
     const ali = this.alignment(fish);
@@ -559,18 +591,21 @@ class MarineEcosystem {
       ali.x * this.config.alignmentWeight +
       coh.x * this.config.cohesionWeight +
       foodForce.x +
-      bounds.x;
+      bounds.x +
+      currentForce.x;
 
     fish.vy +=
       sep.y * this.config.separationWeight +
       ali.y * this.config.alignmentWeight +
       coh.y * this.config.cohesionWeight +
       foodForce.y +
-      bounds.y;
+      bounds.y +
+      currentForce.y;
 
     // 体型影响速度
-    const speedMultiplier = 1 / fish.size;
-    const maxSpeed = this.config.maxSpeed * speedMultiplier;
+    const speedMultiplier = (1 / fish.size) * lightFactor * tempFactor;
+    const speciesSpeed = fish.species.speed;
+    const maxSpeed = this.config.maxSpeed * speciesSpeed * speedMultiplier;
 
     // 限制速度
     const speed = Math.sqrt(fish.vx * fish.vx + fish.vy * fish.vy);
@@ -603,6 +638,116 @@ class MarineEcosystem {
   }
 
   /**
+   * 更新环境系统
+   */
+  updateEnvironment(deltaTime) {
+    // 更新时间
+    const timeIncrement =
+      (deltaTime / 1000) *
+      (24 / this.environment.dayLength) *
+      this.environment.timeSpeed;
+    this.environment.time += timeIncrement;
+
+    // 时间循环
+    if (this.environment.time >= 24) {
+      this.environment.time -= 24;
+    }
+
+    // 计算光照强度
+    // 使用正弦函数模拟昼夜变化，6点日出，18点日落
+    const sunrise = 6;
+    const sunset = 18;
+    let lightIntensity = 0;
+
+    if (this.environment.time >= sunrise && this.environment.time <= sunset) {
+      // 白天
+      const daylightHours = sunset - sunrise;
+      const relativeTime = (this.environment.time - sunrise) / daylightHours;
+      // 正弦曲线，正午光照最强
+      lightIntensity = Math.sin(relativeTime * Math.PI);
+      this.environment.isDay = true;
+    } else {
+      // 夜晚
+      lightIntensity =
+        0.1 + 0.1 * Math.sin((this.environment.time / 24) * Math.PI * 2);
+      this.environment.isDay = false;
+    }
+
+    this.environment.lightIntensity = lightIntensity;
+
+    // 更新水流方向（缓慢变化）
+    this.environment.currentDirection += (Math.random() - 0.5) * 0.01;
+    if (this.environment.currentDirection >= Math.PI * 2) {
+      this.environment.currentDirection -= Math.PI * 2;
+    } else if (this.environment.currentDirection < 0) {
+      this.environment.currentDirection += Math.PI * 2;
+    }
+
+    // 更新UI
+    this.updateEnvironmentUI();
+  }
+
+  /**
+   * 更新环境UI显示
+   */
+  updateEnvironmentUI() {
+    // 更新时间显示
+    const hours = Math.floor(this.environment.time);
+    const minutes = Math.floor((this.environment.time - hours) * 60);
+    const timeString = `${hours.toString().padStart(2, "0")}:${minutes
+      .toString()
+      .padStart(2, "0")}`;
+    const timeElement = document.getElementById("currentTime");
+    if (timeElement) {
+      timeElement.textContent = timeString;
+    }
+
+    // 更新光照强度
+    const lightPercentage = Math.round(this.environment.lightIntensity * 100);
+    const lightElement = document.getElementById("lightLevel");
+    if (lightElement) {
+      lightElement.textContent = `${lightPercentage}%`;
+      lightElement.style.color = this.environment.isDay ? "#ffd700" : "#4a5568";
+    }
+
+    // 更新温度显示（表层温度）
+    const tempElement = document.getElementById("waterTemp");
+    if (tempElement) {
+      tempElement.textContent = `${this.environment.surfaceTemp.toFixed(1)}°C`;
+    }
+
+    // 更新水流速度
+    const currentElement = document.getElementById("currentSpeed");
+    if (currentElement) {
+      currentElement.textContent = `${this.environment.currentSpeed.toFixed(
+        1
+      )} m/s`;
+    }
+
+    // 更新背景光照效果
+    this.updateBackgroundLighting();
+  }
+
+  /**
+   * 更新背景光照效果
+   */
+  updateBackgroundLighting() {
+    const lightIntensity = this.environment.lightIntensity;
+    const bgElement = document.querySelector(".ocean-bg");
+    if (bgElement) {
+      // 根据光照强度调整背景亮度
+      const darkness = 0.3 + (1 - lightIntensity) * 0.7;
+      bgElement.style.filter = `brightness(${0.5 + lightIntensity * 0.5})`;
+    }
+
+    // 更新水面效果
+    const surfaceElement = document.querySelector(".water-surface");
+    if (surfaceElement) {
+      surfaceElement.style.opacity = 0.3 + lightIntensity * 0.4;
+    }
+  }
+
+  /**
    * 动画循环
    */
   animate() {
@@ -612,8 +757,11 @@ class MarineEcosystem {
     }
 
     const now = Date.now();
-    const deltaTime = now - (this.lastUpdateTime || now);
+    const deltaTime = now - this.lastUpdateTime;
     this.lastUpdateTime = now;
+
+    // 更新环境
+    this.updateEnvironment(deltaTime);
 
     // 更新每条鱼
     for (let i = this.fishes.length - 1; i >= 0; i--) {
@@ -920,6 +1068,76 @@ class MarineEcosystem {
     else if (fish.y > window.innerHeight - (this.config.edgeMargin || 50))
       forceY = -turnForce;
     return { x: forceX, y: forceY };
+  }
+
+  /**
+   * 获取光照对鱼类的影响因子
+   */
+  getLightInfluence(fish) {
+    const species = fish.species;
+    const currentLight = this.environment.lightIntensity;
+
+    let influence = 1.0;
+
+    switch (species.activityPattern) {
+      case "diurnal":
+        // 昼行性鱼类，光照越强越活跃
+        influence = Math.min(1.5, 0.5 + currentLight);
+        break;
+      case "nocturnal":
+        // 夜行性鱼类，光照越弱越活跃
+        influence = Math.min(1.5, 0.5 + (1 - currentLight));
+        break;
+      case "crepuscular":
+        // 晨昏性鱼类，中等光照最活跃
+        influence = Math.min(1.5, 1 - Math.abs(currentLight - 0.5));
+        break;
+    }
+
+    return influence;
+  }
+
+  /**
+   * 获取水流对鱼类的作用力
+   */
+  getCurrentForce(fish) {
+    // 计算水流方向的单位向量
+    const currentX = Math.cos(this.environment.currentDirection);
+    const currentY = Math.sin(this.environment.currentDirection);
+
+    // 水流速度随深度变化（简化处理，y坐标越大表示越深）
+    const depthFactor = Math.min(1, fish.y / window.innerHeight);
+    const effectiveSpeed = this.environment.currentSpeed * depthFactor;
+
+    return {
+      x: currentX * effectiveSpeed,
+      y: currentY * effectiveSpeed,
+    };
+  }
+
+  /**
+   * 获取温度对鱼类的影响因子
+   */
+  getTemperatureInfluence(fish) {
+    // 简化处理：根据深度获取温度
+    const depth = fish.y / window.innerHeight;
+    const currentTemp =
+      this.environment.surfaceTemp -
+      (this.environment.surfaceTemp - this.environment.deepTemp) * depth;
+
+    // 假设鱼类最适温度在18-25度之间
+    const optimalTempMin = 18;
+    const optimalTempMax = 25;
+
+    if (currentTemp >= optimalTempMin && currentTemp <= optimalTempMax) {
+      return 1.0; // 最适温度
+    } else if (currentTemp < optimalTempMin) {
+      // 温度过低，活动减弱
+      return Math.max(0.5, currentTemp / optimalTempMin);
+    } else {
+      // 温度过高，活动减弱
+      return Math.max(0.5, (30 - currentTemp) / 5);
+    }
   }
 }
 

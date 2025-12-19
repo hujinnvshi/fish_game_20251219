@@ -118,6 +118,18 @@ h1 {
     flex-wrap: wrap;
 }
 
+/* 环境面板 */
+.environment-panel {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    max-width: 800px;
+    margin: 1rem auto;
+    padding: 0 1rem;
+    z-index: 20;
+    position: relative;
+}
+
 .fish-species {
     display: flex;
     align-items: center;
