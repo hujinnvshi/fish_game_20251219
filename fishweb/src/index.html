@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>海洋生态系统模拟</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <!-- 海洋背景 -->
+    <div class="ocean-bg">
+      <div class="light-spots"></div>
+      <div class="water-surface"></div>
+    </div>
+
+    <!-- 标题和信息区域 -->
+    <div class="header">
+      <h1>🌊 海洋生态系统模拟</h1>
+      <p class="subtitle">
+        基于Boids算法的完整生态系统 · 包含食物链、生长、繁殖和进化
+      </p>
+
+      <!-- 生态系统信息面板 -->
+      <div class="ecosystem-panel">
+        <div class="info-card">
+          <h3>🐟 现存鱼类</h3>
+          <p id="fishCount">0</p>
+        </div>
+        <div class="info-card">
+          <h3>🍽️ 活跃食物</h3>
+          <p id="foodCount">0</p>
+        </div>
+        <div class="info-card">
+          <h3>📈 平均体型</h3>
+          <p id="avgSize">1.0x</p>
+        </div>
+        <div class="info-card">
+          <h3>⚡ 系统状态</h3>
+          <p id="systemStatus">运行中</p>
+        </div>
+      </div>
+
+      <!-- 鱼类图鉴 -->
+      <div class="fish-encyclopedia">
+        <div class="fish-species">
+          <div class="species-icon" style="background-color: #ff6b6b"></div>
+          <span>小丑鱼 (草食)</span>
+        </div>
+        <div class="fish-species">
+          <div class="species-icon" style="background-color: #4ecdc4"></div>
+          <span>蓝唐鱼 (杂食)</span>
+        </div>
+        <div class="fish-species">
+          <div class="species-icon" style="background-color: #ffd166"></div>
+          <span>黄金吊 (肉食)</span>
+        </div>
+        <div class="fish-species">
+          <div class="species-icon" style="background-color: #9d4edd"></div>
+          <span>紫罗兰 (掠食)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 统计信息 -->
+    <div class="statistics">
+      <div class="stat-card">
+        <h3>📊 统计数据</h3>
+        <div class="stat-line">
+          <span>总出生数:</span>
+          <span id="totalBorn">0</span>
+        </div>
+        <div class="stat-line">
+          <span>总死亡数:</span>
+          <span id="totalDead">0</span>
+        </div>
+        <div class="stat-line">
+          <span>捕食次数:</span>
+          <span id="predationCount">0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 控制面板 -->
+    <div class="controls">
+      <button class="control-btn" id="addFishBtn">+ 添加鱼</button>
+      <button class="control-btn" id="addFoodBtn">🍽️ 批量投食</button>
+      <button class="control-btn" id="clearFoodBtn">🧹 清理食物</button>
+      <button class="control-btn" id="pauseBtn">⏸️ 暂停</button>
+      <button class="control-btn" id="resetBtn">🔄 重置</button>
+    </div>
+
+    <!-- 系统信息 -->
+    <div class="system-info">
+      <p>💡 点击海面投食 · 观察食物链和自然选择</p>
+    </div>
+
+    <!-- 海洋容器 -->
+    <div id="oceanContainer"></div>
+
+    <!-- JavaScript文件 -->
+    <script src="ecosystem.js"></script>
+  </body>
+</html>
