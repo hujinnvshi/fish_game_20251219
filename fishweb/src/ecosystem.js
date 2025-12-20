@@ -11,6 +11,7 @@ class MarineEcosystem {
     this.foods = []; // 所有食物
     this.isRunning = true; // 系统运行状态
     this.lastSpawnTime = 0; // 上次生成时间
+    this.lastUpdateTime = Date.now(); // 上次更新时间
 
     // 统计数据
     this.stats = {
@@ -48,6 +49,10 @@ class MarineEcosystem {
       alignmentWeight: 1.0,
       cohesionWeight: 1.0,
       foodAttractionWeight: 2.0,
+
+      // 边界参数
+      edgeMargin: 50,
+      edgeTurnFactor: 0.5,
 
       // 生存参数
       baseMetabolism: 0.0003, // 基础代谢率
@@ -423,7 +428,7 @@ class MarineEcosystem {
       if (other === fish) continue;
 
       // 检查食物链层级
-      if (!fish.species.canEat.includes(other.species.foodChain)) continue;
+      if (other.species.foodChain >= fish.species.foodChain) continue;
 
       // 检查体型差异
       if (other.size >= fish.size) continue;
@@ -497,13 +502,13 @@ class MarineEcosystem {
       child.species = parent.species;
       child.speciesIndex = parent.speciesIndex;
       this.updateFishAppearance(child);
-
-      // 设置繁殖冷却
-      parent.canReproduce = false;
-      setTimeout(() => {
-        parent.canReproduce = true;
-      }, 10000); // 10秒繁殖冷却
     }
+
+    // 设置繁殖冷却
+    parent.canReproduce = false;
+    setTimeout(() => {
+      parent.canReproduce = true;
+    }, 10000); // 10秒繁殖冷却
   }
 
   /**
