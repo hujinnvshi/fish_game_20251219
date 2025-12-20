@@ -111,8 +111,8 @@ class MarineEcosystem {
       {
         name: "紫罗兰",
         color: "#9D4EDD",
-        baseSize: 22,
-        speed: 1.2,
+        baseSize: 35, // 增加顶级掠食者体型，符合生态规律
+        speed: 1.0, // 降低速度，符合大体型生物通常速度较慢的原则
         diet: "apex", // 顶级掠食
         foodChain: 4,
         canEat: [1, 2, 3], // 能吃所有低层级鱼
@@ -142,24 +142,48 @@ class MarineEcosystem {
    * 创建初始鱼群
    */
   createInitialFish(count) {
-    for (let i = 0; i < count; i++) {
-      this.addRandomFish();
+    // 按生态金字塔比例分配鱼群数量
+    // 草食性:50%, 杂食性:30%, 肉食性:15%, 顶级掠食者:5%
+    // 符合生态系统中营养级越低，数量越多的原则
+    const speciesDistribution = [0.5, 0.3, 0.15, 0.05];
+    const fishPerSpecies = speciesDistribution.map(ratio => Math.floor(count * ratio));
+    const remainingFish = count - fishPerSpecies.reduce((sum, count) => sum + count, 0);
+    fishPerSpecies[0] += remainingFish; // 将剩余的鱼分配给第一种（草食性）
+
+    // 为每个物种创建对应数量的鱼
+    for (let speciesIndex = 0; speciesIndex < this.fishSpecies.length; speciesIndex++) {
+      const fishCount = fishPerSpecies[speciesIndex];
+      if (fishCount <= 0) continue;
+      
+      // 创建该物种的鱼群
+      for (let i = 0; i < fishCount; i++) {
+        this.addRandomFish(null, null, null, null, speciesIndex);
+      }
     }
   }
 
   /**
    * 添加随机鱼类
    */
-  addRandomFish(x, y) {
-    const speciesIndex = Math.floor(Math.random() * this.fishSpecies.length);
+  addRandomFish(x, y, vx, vy, speciesIndex = null) {
+    // 如果没有指定物种，随机选择，但根据物种比例调整概率
+    if (speciesIndex === null) {
+      const rand = Math.random();
+      // 按生态金字塔比例分配随机概率
+      if (rand < 0.5) speciesIndex = 0; // 草食性:50%
+      else if (rand < 0.8) speciesIndex = 1; // 杂食性:30%
+      else if (rand < 0.95) speciesIndex = 2; // 肉食性:15%
+      else speciesIndex = 3; // 顶级掠食者:5%
+    }
+    
     const species = this.fishSpecies[speciesIndex];
 
     const fish = {
       id: Date.now() + Math.random(),
       x: x || Math.random() * window.innerWidth,
       y: y || Math.random() * window.innerHeight,
-      vx: (Math.random() - 0.5) * 2,
-      vy: (Math.random() - 0.5) * 2,
+      vx: vx !== undefined ? vx : (Math.random() - 0.5) * 1.5,
+      vy: vy !== undefined ? vy : (Math.random() - 0.5) * 1.5,
       species: species,
       speciesIndex: speciesIndex,
 
@@ -461,20 +485,38 @@ class MarineEcosystem {
     this.stats.predationCount++;
     this.updateStats();
 
-    // 捕食者生长
+    // 计算能量传递效率，基于10%定律（能量在相邻营养级间的传递效率约为10%）
+    const trophicLevelDifference = predator.species.foodChain - prey.species.foodChain;
+    const energyEfficiency = Math.pow(0.1, trophicLevelDifference);
+    
+    // 捕食者生长，考虑能量传递效率
+    const growthFactor = 0.3 * energyEfficiency;
     predator.size = Math.min(
       this.config.maxSize,
-      predator.size + prey.size * 0.3
+      predator.size + prey.size * growthFactor
     );
+    
     predator.lastEatTime = Date.now();
     predator.isStarving = false;
     this.updateFishAppearance(predator);
 
-    // 生成鱼食物
-    this.addFood(prey.x, prey.y, true);
+    // 生成鱼食物，基于被吃鱼类的大小和能量效率
+    const foodCount = Math.max(1, Math.floor(prey.size * 2 * energyEfficiency));
+    for (let i = 0; i < foodCount; i++) {
+      setTimeout(() => {
+        const angle = Math.random() * Math.PI * 2;
+        const distance = Math.random() * 20;
+        this.addFood(
+          prey.x + Math.cos(angle) * distance,
+          prey.y + Math.sin(angle) * distance,
+          true
+        );
+      }, i * 50);
+    }
 
-    // 检查繁殖
+    // 检查繁殖（非玩家鱼）
     if (
+      !predator.isPlayer &&
       predator.size >= this.config.reproductionSize &&
       Math.random() < this.config.reproductionChance
     ) {
@@ -525,10 +567,15 @@ class MarineEcosystem {
         // 健康度下降
         fish.health = Math.max(0, fish.health - 0.002 * deltaTime);
 
-        // 体型缩小
+        // 根据克莱伯定律（Kleiber's law）计算代谢率：
+        // 代谢率与体重的3/4次方成正比
+        const sizeFactor = Math.pow(fish.size, 0.75);
+        const metabolicRate = this.config.baseMetabolism * sizeFactor;
+        
+        // 体型缩小，考虑代谢率差异
         fish.size = Math.max(
           this.config.minSize,
-          fish.size - this.config.baseMetabolism * deltaTime
+          fish.size - metabolicRate * deltaTime
         );
 
         this.updateFishAppearance(fish);
